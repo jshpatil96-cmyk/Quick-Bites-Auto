@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick Bites</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#ec0000">
+<style>
+  :root{--red:#ec0000;--dark:#b30000;--soft:#fdecec}
+  [hidden]{display:none!important}
+  body{font-family:system-ui,sans-serif;margin:0;background:#fff;color:#222}
+  header{position:sticky;top:0;background:var(--red);color:#fff;padding:8px 14px;z-index:5;display:flex;align-items:center;gap:12px;box-shadow:0 2px 6px #0003}
+  header img{width:46px;height:46px;border-radius:10px;border:2px solid #fff;object-fit:cover}
+  header h1{margin:0;font-size:20px;letter-spacing:.3px}
+  header .sub{font-size:13px;margin-top:2px}
+  header input[type=date]{padding:3px 6px;font-size:14px;border:0;border-radius:6px}
+  #owner-btn{margin-left:auto;background:#fff;color:var(--dark);border:0;border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700}
+  main{padding:10px;max-width:520px;margin:auto}
+  h2{font-size:14px;margin:18px 0 6px;color:var(--red);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--red);padding-bottom:3px}
+  .panel{background:var(--soft);border:1px solid #f3c4c4;border-radius:12px;padding:8px;margin-bottom:10px}
+  .panel h2{margin-top:4px}
+  .row{display:flex;align-items:center;gap:8px;background:#fff;padding:8px 10px;margin-bottom:6px;border-radius:10px;border:1px solid #f3c4c4;box-shadow:0 1px 3px #ec000022}
+  .name{flex:1;font-weight:600} .name small{font-weight:400;color:#777}
+  .qty{min-width:34px;text-align:center;font-size:20px;font-weight:700;color:var(--dark)}
+  .row button{width:44px;height:44px;font-size:24px;border:0;border-radius:10px;background:var(--red);color:#fff}
+  .row button:active{background:var(--dark)}
+  .row button.minus{background:var(--soft);color:var(--dark);border:1px solid #f3c4c4}
+  .box{display:flex;gap:8px;align-items:center}
+  .box input,.box select{flex:1;padding:10px;font-size:16px;min-width:0;border:1px solid #e3a3a3;border-radius:8px;background:#fff}
+  .box input.num{flex:0 0 84px}
+  .box button.save{width:auto;height:auto;padding:10px 14px;font-size:16px;border-radius:8px}
+  .box button.danger{background:var(--dark)}
+  .box button.clear{width:36px;height:44px;font-size:16px;background:var(--soft);color:var(--dark);border:1px solid #f3c4c4;padding:0}
+  .saved{min-width:56px;text-align:right;font-weight:700;color:var(--dark)}
+  .total{font-size:20px;font-weight:800;text-align:right;padding:10px 12px;margin-top:8px;background:var(--red);color:#fff;border-radius:10px}
+  #chk{font-size:13px;text-align:right;color:var(--dark);font-weight:600}
+  .msg{font-size:14px;font-weight:600;color:var(--dark);min-height:18px;padding:2px 4px}
+  #pick-btn{display:block;width:100%;padding:10px;margin-bottom:8px;font-size:15px;font-weight:700;color:var(--dark);background:#fff;border:2px solid var(--red);border-radius:10px}
+  .pick-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #f3c4c4;border-radius:8px;padding:10px;margin-bottom:5px;font-size:16px}
+  .pick-row input{width:22px;height:22px;accent-color:var(--red)}
+  .pick-row small{color:#777}
+  .pick-actions{display:flex;gap:8px;margin-top:6px}
+  .pick-actions button{flex:1;padding:12px;font-size:16px;font-weight:700;border-radius:8px;border:2px solid var(--red);background:#fff;color:var(--dark)}
+  .pick-actions button.primary{background:var(--red);color:#fff}
+</style>
+</head>
+<body>
+<header>
+  <img src="icon-192.png" alt="Quick Bites">
+  <div>
+    <h1>Quick Bites</h1>
+    <div class="sub"><input type="date" id="day"> <span id="status"></span></div>
+  </div>
+  <button id="owner-btn">🔒 Owner</button>
+</header>
+<main>
+  <!-- Owner login (hidden until the Owner button is tapped) -->
+  <div id="login" class="panel" hidden>
+    <div class="row box">
+      <input type="password" id="pin" inputmode="numeric" placeholder="Owner PIN">
+      <button class="save" id="pin-go">Enter</button>
+    </div>
+    <div class="msg" id="lmsg"></div>
+  </div>
+
+  <!-- Owner panel (only visible in owner mode) -->
+  <div id="owner" class="panel" hidden>
+    <h2>Owner mode: products</h2>
+    <div class="row box">
+      <input type="text" id="np-name" placeholder="New product name" maxlength="40">
+      <input type="number" class="num" id="np-price" inputmode="decimal" placeholder="₹">
+      <button class="save" id="np-add">Add</button>
+    </div>
+    <div class="row box">
+      <select id="pp-dish"></select>
+      <input type="number" class="num" id="pp-price" inputmode="decimal" placeholder="New ₹">
+      <button class="save" id="pp-set">Set price</button>
+    </div>
+    <div class="row box">
+      <select id="rm-dish"></select>
+      <button class="save danger" id="rm-go">Remove</button>
+    </div>
+    <div class="msg" id="omsg"></div>
+  </div>
+
+  <!-- Choose which items to show today -->
+  <button id="pick-btn">Today's items: <span id="shown">0</span>/<span id="of">0</span> &nbsp;✎</button>
+  <div id="pick" class="panel" hidden>
+    <h2>Items selling today</h2>
+    <div id="pick-list"></div>
+    <div class="pick-actions">
+      <button id="pick-all">Show all</button>
+      <button id="pick-done" class="primary">Done</button>
+    </div>
+  </div>
+
+  <div id="menu"></div>
+  <div class="total">Total: ₹<span id="grand">0</span> &nbsp;(<span id="plates">0</span> plates)</div>
+
+  <h2>Collection</h2>
+  <div id="f-collection"></div>
+  <div id="chk"></div>
+
+  <h2>Milk &amp; Water</h2>
+  <div id="f-milk"></div>
+
+  <h2>Patpedhi</h2>
+  <div id="f-pat"></div>
+</main>
+
+<script>
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwX8-G2KGztJ7em1QIjZ1YICG4f0KYOV0b8FQrRl4j3K-Q6x1sv2UshRMi5LscICXmnaQ/exec';
+const SECRET    = 'dnyanal';
+const CUTOFF_HOUR = 6;      // day changes at 6 AM, so sales after midnight stay on the same date
+const OWNER_IDLE_MS = 5 * 60 * 1000;   // owner mode closes by itself after 5 minutes
+
+// Starting menu. After the first online load, the menu comes from the Summary tab of your sheet.
+const DEFAULT_MENU = [
+  ['Veg Steam Momos',50],['Veg Fried Momos',60],['kurkure momos',80],
+  ['Potato Spiral Peri Peri',50],['Potato Spiral Cheese',60],
+  ['Cold Coffee',50],['Coffee Float',70],['Cold Coffee with Crush',60],['Iced Coffee',50],
+  ['Coke',30],['Coke Float',60],['Water Bottle',10],
+  ['Plain Maggi',40],['Masala Maggi',50],['Cheese Maggi',60],
+  ['Vanilla Softy',30],['Chocolate & Mix Softy',40],
+  ['Plain Fries',60],['Peri Peri Fries',70],['Loaded Fries',80],
+  ['Additional',10],
+  ['Grilled Sandwich',60],['Cheese Grilled Sandwich',70],
+  ['paneer steam',70],['paneer fried',80],['paneer kurkure',100]
+];
+let ALL = JSON.parse(localStorage.getItem('qb_menu') || 'null') || DEFAULT_MENU;
+
+// Fields: key = what the sheet heading says, label = what is shown on the page
+const FIELDS = {
+  collection: [['Cash Collection','Cash'], ['Online Collection','Online']],
+  milk:       [['Water','Water'], ['Regular Milk','Regular Milk'], ['Full Fat Milk','Full Fat Milk']],
+  pat:        [['More','More'], ['Bankar','Bankar']]
+};
+
+let db     = JSON.parse(localStorage.getItem('qb_db2')    || '{}');   // {date:{q:{dish:n}, v:{field:value}}}
+let dirty  = JSON.parse(localStorage.getItem('qb_dirty2') || '[]');
+let hidden = JSON.parse(localStorage.getItem('qb_hidden') || '{}');   // {date:[dish names hidden that day]}
+let manualDay = null;
+let ownerPin = null, ownerTimer = null;      // the PIN is kept in memory only, never saved
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function businessDate(){ return new Date(Date.now() - CUTOFF_HOUR*3600*1000).toLocaleDateString('en-CA'); }
+function cur(){ return manualDay || businessDate(); }
+function rec(){ const d = cur(); if(!db[d]) db[d] = {q:{}, v:{}}; if(!db[d].v) db[d].v = {}; return db[d]; }
+function persist(){ localStorage.setItem('qb_db2', JSON.stringify(db)); localStorage.setItem('qb_dirty2', JSON.stringify(dirty)); }
+function touch(){ const d = cur(); if(!dirty.includes(d)) dirty.push(d); persist(); render(); sync(); }
+
+/* ---------- Hiding items for the day ---------- */
+function hid(){ return hidden[cur()] || []; }
+function saveHidden(){
+  const keys = Object.keys(hidden).sort();
+  while(keys.length > 14) delete hidden[keys.shift()];      // keep only the last 14 days
+  localStorage.setItem('qb_hidden', JSON.stringify(hidden));
+}
+function buildPicker(){
+  const r = rec(), h = hid();
+  document.getElementById('pick-list').innerHTML = ALL.map(([n]) => {
+    const sold = (r.q[n]||0) > 0, on = sold || !h.includes(n);
+    return `<label class="pick-row"><input type="checkbox" data-p="${esc(n)}" ${on?'checked':''} ${sold?'disabled':''}> <span>${esc(n)}${sold?' <small>(sold today)</small>':''}</span></label>`;
+  }).join('');
+}
+document.getElementById('pick-btn').onclick = () => {
+  const p = document.getElementById('pick');
+  p.hidden = !p.hidden;
+  if(!p.hidden) buildPicker();
+};
+document.getElementById('pick-done').onclick = () => { document.getElementById('pick').hidden = true; };
+document.getElementById('pick-all').onclick = () => {
+  hidden[cur()] = []; saveHidden(); buildPicker(); render();
+};
+document.getElementById('pick-list').addEventListener('change', e => {
+  const cb = e.target.closest('input[data-p]'); if(!cb) return;
+  const n = cb.dataset.p, d = cur();
+  let h = hidden[d] || [];
+  h = cb.checked ? h.filter(x => x !== n) : (h.includes(n) ? h : h.concat(n));
+  hidden[d] = h; saveHidden(); render();
+});
+
+/* ---------- Building the screen ---------- */
+function buildMenu(){
+  document.getElementById('menu').innerHTML = ALL.map(([n,p]) =>
+    `<div class="row" data-row="${esc(n)}"><span class="name">${esc(n)} <small>₹${p}</small></span>
+      <button class="minus" data-d="${esc(n)}" data-n="-1">−</button>
+      <span class="qty" data-q="${esc(n)}">0</span>
+      <button data-d="${esc(n)}" data-n="1">+</button></div>`).join('');
+}
+function buildFields(){
+  for(const grp in FIELDS){
+    document.getElementById('f-'+grp).innerHTML = FIELDS[grp].map(([key,label]) =>
+      `<div class="row box"><span class="name">${label}</span>
+        <span class="saved" data-s="${key}">–</span>
+        <input type="number" inputmode="decimal" data-i="${key}">
+        <button class="save" data-f="${key}">Save</button>
+        <button class="clear" data-c="${key}" title="Clear">✕</button></div>`).join('');
+  }
+}
+function fillDishSelect(){
+  ['pp-dish','rm-dish'].forEach(id => {
+    const sel = document.getElementById(id), keep = sel.value;
+    sel.innerHTML = ALL.map(([n,p]) => `<option value="${esc(n)}">${esc(n)} (₹${p})</option>`).join('');
+    if(keep) sel.value = keep;
+  });
+}
+function setMenu(m){
+  ALL = m.map(x => [String(x[0]), Number(x[1]) || 0]);
+  localStorage.setItem('qb_menu', JSON.stringify(ALL));
+  buildMenu(); fillDishSelect(); render();
+  if(!document.getElementById('pick').hidden) buildPicker();
+}
+
+/* ---------- Talking to the sheet ---------- */
+async function api(params){
+  const u = SHEET_URL + '?' + new URLSearchParams(Object.assign({secret:SECRET}, params));
+  const r = await fetch(u);
+  return r.json();
+}
+async function loadMenu(){
+  if(!navigator.onLine) return;
+  try{
+    const r = await api({action:'menu'});
+    if(r.ok && r.menu && r.menu.length) setMenu(r.menu);
+  }catch(e){}
+}
+
+/* ---------- Staff actions: sales and extra data ---------- */
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.d){
+    const r = rec(), n = b.dataset.d;
+    r.q[n] = Math.max(0, (r.q[n]||0) + parseInt(b.dataset.n));
+    touch();
+  } else if(b.dataset.f){
+    const key = b.dataset.f, el = document.querySelector(`[data-i="${key}"]`), v = parseFloat(el.value);
+    if(isNaN(v)) return;
+    rec().v[key] = v; el.value = ''; touch();
+  } else if(b.dataset.c){
+    rec().v[b.dataset.c] = 0;      // 0 empties the cell in the sheet
+    touch();
+  }
+});
+
+function totals(){
+  const q = rec().q; let plates = 0, money = 0;
+  ALL.forEach(([n,p]) => { const c = q[n]||0; plates += c; money += c*p; });
+  return {plates, money};
+}
+function render(){
+  const day = document.getElementById('day');
+  if(day.value !== cur()) day.value = cur();
+  const r = rec(), h = hid();
+  document.querySelectorAll('[data-q]').forEach(el => { el.textContent = r.q[el.dataset.q] || 0; });
+
+  // show only today's items (an item that already sold today always stays visible)
+  let shown = 0;
+  document.querySelectorAll('#menu .row').forEach(row => {
+    const n = row.dataset.row;
+    const hideIt = h.includes(n) && !((r.q[n]||0) > 0);
+    row.hidden = hideIt;
+    if(!hideIt) shown++;
+  });
+  document.getElementById('shown').textContent = shown;
+  document.getElementById('of').textContent = ALL.length;
+
+  const t = totals();
+  document.getElementById('grand').textContent = t.money;
+  document.getElementById('plates').textContent = t.plates;
+  Object.values(FIELDS).flat().forEach(([key]) => {
+    const el = document.querySelector(`[data-s="${key}"]`);
+    el.textContent = r.v[key] ? r.v[key] : '–';
+  });
+  const cash = r.v['Cash Collection'], online = r.v['Online Collection'];
+  const diff = (cash||0) + (online||0) - t.money;
+  document.getElementById('chk').textContent = (cash!=null || online!=null) && diff !== 0
+    ? `Cash + Online is ₹${Math.abs(diff)} ${diff>0?'more':'less'} than total` : '';
+  document.getElementById('status').textContent = dirty.length ? '⏳ not synced' : '✅ synced';
+}
+
+function pick(r, group){
+  const o = {}; let any = false;
+  FIELDS[group].forEach(([key]) => { if(r.v[key] != null){ o[key] = r.v[key]; any = true; } });
+  return any ? o : null;
+}
+function payload(d){
+  const r = db[d] || {q:{}, v:{}}; r.v = r.v || {};
+  const s = {};
+  ALL.forEach(([n]) => s[n] = r.q[n]||0);
+  ['Cash Collection','Online Collection'].forEach(k => { if(r.v[k] != null) s[k] = r.v[k]; });
+  const p = {secret:SECRET, date:d, summary:s};
+  const milk = pick(r,'milk'), pat = pick(r,'pat');
+  if(milk) p.milk = milk;
+  if(pat)  p.patpedhi = pat;
+  return p;
+}
+async function sync(){
+  if(!navigator.onLine || !dirty.length) return;
+  for(const d of [...dirty]){
+    try{
+      await fetch(SHEET_URL, {method:'POST', mode:'no-cors', body:JSON.stringify(payload(d))});
+      dirty = dirty.filter(x => x !== d); persist();
+    }catch(e){ break; }
+  }
+  render();
+}
+
+/* ---------- Owner mode ---------- */
+function updateOwnerUI(){
+  document.getElementById('owner').hidden = !ownerPin;
+  document.getElementById('login').hidden = true;
+  document.getElementById('owner-btn').textContent = ownerPin ? '🔓 Exit owner' : '🔒 Owner';
+}
+function exitOwner(){
+  ownerPin = null; clearTimeout(ownerTimer);
+  document.getElementById('omsg').textContent = '';
+  updateOwnerUI();
+}
+function resetOwnerTimer(){
+  clearTimeout(ownerTimer);
+  if(ownerPin) ownerTimer = setTimeout(exitOwner, OWNER_IDLE_MS);
+}
+async function enterOwner(){
+  const pinEl = document.getElementById('pin'), msg = document.getElementById('lmsg');
+  const pin = pinEl.value.trim();
+  if(!pin) return;
+  if(!navigator.onLine){ msg.textContent = 'Internet is needed to open owner mode'; return; }
+  msg.textContent = 'Checking...';
+  try{
+    const r = await api({action:'checkPin', pin});
+    if(r.ok){ ownerPin = pin; pinEl.value = ''; msg.textContent = ''; updateOwnerUI(); resetOwnerTimer(); }
+    else msg.textContent = r.locked ? 'Too many wrong tries. Try again after 15 minutes.' : 'Wrong PIN';
+  }catch(e){ msg.textContent = 'Could not reach the sheet. Check internet.'; }
+}
+async function ownerCall(action, extra){
+  const msg = document.getElementById('omsg');
+  if(!ownerPin) return false;
+  if(!navigator.onLine){ msg.textContent = 'Internet is needed'; return false; }
+  msg.textContent = 'Working...';
+  let ok = false;
+  try{
+    const r = await api(Object.assign({action, pin: ownerPin}, extra));
+    if(r.ok){ if(r.menu) setMenu(r.menu); msg.textContent = '✅ Done'; ok = true; }
+    else if(r.locked){ msg.textContent = 'Locked for 15 minutes'; exitOwner(); }
+    else if(r.error === 'exists') msg.textContent = 'That product already exists';
+    else if(r.error === 'notfound') msg.textContent = 'Product not found in the sheet';
+    else if(r.error === 'invalid') msg.textContent = 'That did not work. Check the name and price.';
+    else { msg.textContent = 'Not allowed. Please sign in again.'; exitOwner(); }
+  }catch(e){ msg.textContent = 'Could not reach the sheet'; }
+  resetOwnerTimer();
+  return ok;
+}
+document.getElementById('owner-btn').onclick = () => {
+  if(ownerPin){ exitOwner(); return; }
+  const l = document.getElementById('login'); l.hidden = !l.hidden;
+  if(!l.hidden) document.getElementById('pin').focus();
+};
+document.getElementById('pin-go').onclick = enterOwner;
+document.getElementById('pin').addEventListener('keydown', e => { if(e.key === 'Enter') enterOwner(); });
+document.getElementById('np-add').onclick = async () => {
+  const nameEl = document.getElementById('np-name'), priceEl = document.getElementById('np-price');
+  const name = nameEl.value.trim(), price = priceEl.value;
+  if(!name || price === ''){ document.getElementById('omsg').textContent = 'Enter the product name and price'; return; }
+  if(await ownerCall('addProduct', {name, price})){ nameEl.value = ''; priceEl.value = ''; }
+};
+document.getElementById('pp-set').onclick = async () => {
+  const name = document.getElementById('pp-dish').value, priceEl = document.getElementById('pp-price');
+  if(priceEl.value === ''){ document.getElementById('omsg').textContent = 'Enter the new price'; return; }
+  if(!confirm('Changing a price also changes the OLD totals for this dish in the sheet. Continue?')) return;
+  if(await ownerCall('setPrice', {name, price: priceEl.value})) priceEl.value = '';
+};
+document.getElementById('rm-go').onclick = async () => {
+  const name = document.getElementById('rm-dish').value;
+  if(!name) return;
+  if(!confirm('Remove "' + name + '"?\n\nThis deletes its row in the sheet, including its past sales, so past totals will go down. Continue?')) return;
+  await ownerCall('removeProduct', {name});
+};
+
+/* ---------- Start ---------- */
+document.getElementById('day').addEventListener('change', e => {
+  manualDay = (e.target.value === businessDate()) ? null : e.target.value; render();
+  if(!document.getElementById('pick').hidden) buildPicker();
+});
+window.addEventListener('online', () => { sync(); loadMenu(); });
+setInterval(() => { render(); sync(); }, 60000);
+setInterval(loadMenu, 10 * 60 * 1000);
+buildMenu(); buildFields(); fillDishSelect(); render(); sync(); loadMenu();
+
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+</script>
+</body>
+</html>
